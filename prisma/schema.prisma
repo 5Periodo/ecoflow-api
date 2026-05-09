@@ -1,0 +1,230 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Condominio {
+  id             String   @id @default(uuid())
+  nome           String
+  metaMensalKg   Decimal  @map("meta_mensal_kg")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  usuarios        Usuario[]
+  apartamentos    Apartamento[]
+  ecopoints       Ecopoint[]
+  recompensas     Recompensa[]
+  rankingsMensais RankingMensal[]
+  metasMensais    MetaMensal[]
+
+  @@map("condominios")
+}
+
+enum Role {
+  SINDICO
+  ADMIN
+}
+
+model Usuario {
+  id           String     @id @default(uuid())
+  condominioId String     @map("condominio_id")
+  nome         String
+  email        String     @unique
+  senhaHash    String     @map("senha_hash")
+  role         Role
+
+  condominio   Condominio @relation(fields: [condominioId], references: [id])
+
+  @@map("usuarios")
+}
+
+enum StatusApartamento {
+  ATIVO
+  INATIVO
+}
+
+model Apartamento {
+  id           String            @id @default(uuid())
+  condominioId String            @map("condominio_id")
+  numero       String
+  bloco        String?
+  status       StatusApartamento @default(ATIVO)
+  createdAt    DateTime          @default(now()) @map("created_at")
+
+  condominio   Condominio        @relation(fields: [condominioId], references: [id])
+  moradores    Morador[]
+  descartes    RegistroDescarte[]
+  rankings     RankingMensal[]
+
+  @@map("apartamentos")
+}
+
+model Morador {
+  id            String      @id @default(uuid())
+  apartamentoId String      @map("apartamento_id")
+  nome          String
+  email         String      @unique
+  senhaHash     String      @map("senha_hash")
+  pontosTotal   Int         @default(0) @map("pontos_total")
+  nivelAtual    Int         @default(1) @map("nivel_atual")
+  createdAt     DateTime    @default(now()) @map("created_at")
+
+  apartamento   Apartamento @relation(fields: [apartamentoId], references: [id])
+  nivel         Nivel       @relation(fields: [nivelAtual], references: [id])
+  descartes     RegistroDescarte[]
+  resgates      Resgate[]
+
+  @@map("moradores")
+}
+
+model Nivel {
+  id            Int       @id
+  nome          String
+  pontosMinimos Int       @map("pontos_minimos")
+  icone         String
+
+  moradores     Morador[]
+
+  @@map("niveis")
+}
+
+enum StatusEcopoint {
+  ATIVO
+  INATIVO
+  MANUTENCAO
+}
+
+model Ecopoint {
+  id           String         @id @default(uuid())
+  condominioId String         @map("condominio_id")
+  descricao    String
+  localizacao  String
+  qrCodeHash   String         @unique @map("qr_code_hash")
+  status       StatusEcopoint @default(ATIVO)
+  createdAt    DateTime       @default(now()) @map("created_at")
+
+  condominio   Condominio     @relation(fields: [condominioId], references: [id])
+  descartes    RegistroDescarte[]
+
+  @@map("ecopoints")
+}
+
+model CategoriaMaterial {
+  id          Int      @id
+  nome        String
+  icone       String
+  pontosPorKg Int      @map("pontos_por_kg")
+
+  descartes   RegistroDescarte[]
+
+  @@map("categorias_material")
+}
+
+model RegistroDescarte {
+  id                  String   @id @default(uuid())
+  moradorId           String   @map("morador_id")
+  apartamentoId       String   @map("apartamento_id")
+  ecopointId          String   @map("ecopoint_id")
+  categoriaMaterialId Int      @map("categoria_material_id")
+  pesoKg              Decimal  @map("peso_kg")
+  pontosGerados       Int      @map("pontos_gerados")
+  dataColeta          DateTime @default(now()) @map("data_coleta")
+  observacoes         String?
+  createdAt           DateTime @default(now()) @map("created_at")
+
+  morador             Morador           @relation(fields: [moradorId], references: [id])
+  apartamento         Apartamento       @relation(fields: [apartamentoId], references: [id])
+  ecopoint            Ecopoint          @relation(fields: [ecopointId], references: [id])
+  categoriaMaterial   CategoriaMaterial @relation(fields: [categoriaMaterialId], references: [id])
+
+  @@map("registros_descarte")
+}
+
+enum TipoRecompensa {
+  DESCONTO_CONDOMINIO
+  CUPOM_PARCEIRO
+}
+
+enum StatusRecompensa {
+  ATIVA
+  PAUSADA
+  ENCERRADA
+}
+
+model Recompensa {
+  id                   String           @id @default(uuid())
+  condominioId         String           @map("condominio_id")
+  titulo               String
+  descricao            String
+  custoPontos          Int              @map("custo_pontos")
+  tipo                 TipoRecompensa
+  valorDesconto        Decimal?         @map("valor_desconto")
+  quantidadeDisponivel Int              @default(-1) @map("quantidade_disponivel")
+  validade             DateTime?
+  status               StatusRecompensa @default(ATIVA)
+
+  condominio           Condominio       @relation(fields: [condominioId], references: [id])
+  resgates             Resgate[]
+
+  @@map("recompensas")
+}
+
+enum StatusResgate {
+  PENDENTE
+  UTILIZADO
+  EXPIRADO
+}
+
+model Resgate {
+  id            String        @id @default(uuid())
+  moradorId     String        @map("morador_id")
+  recompensaId  String        @map("recompensa_id")
+  codigoCupom   String        @unique @map("codigo_cupom")
+  status        StatusResgate @default(PENDENTE)
+  resgatadoEm   DateTime      @default(now()) @map("resgatado_em")
+  utilizadoEm   DateTime?     @map("utilizado_em")
+
+  morador       Morador       @relation(fields: [moradorId], references: [id])
+  recompensa    Recompensa    @relation(fields: [recompensaId], references: [id])
+
+  @@map("resgates")
+}
+
+model RankingMensal {
+  id            String      @id @default(uuid())
+  condominioId  String      @map("condominio_id")
+  apartamentoId String      @map("apartamento_id")
+  mes           Int
+  ano           Int
+  totalKg       Decimal     @map("total_kg")
+  totalPontos   Int         @map("total_pontos")
+  posicao       Int
+  calculadoEm   DateTime    @default(now()) @map("calculado_em")
+
+  condominio    Condominio  @relation(fields: [condominioId], references: [id])
+  apartamento   Apartamento @relation(fields: [apartamentoId], references: [id])
+
+  @@map("rankings_mensais")
+}
+
+enum StatusMeta {
+  EM_ANDAMENTO
+  ATINGIDA
+  NAO_ATINGIDA
+}
+
+model MetaMensal {
+  id           String     @id @default(uuid())
+  condominioId String     @map("condominio_id")
+  mes          Int
+  ano          Int
+  metaKg       Decimal    @map("meta_kg")
+  realizadoKg  Decimal    @map("realizado_kg")
+  status       StatusMeta @default(EM_ANDAMENTO)
+
+  condominio   Condominio @relation(fields: [condominioId], references: [id])
+
+  @@map("metas_mensais")
+}
