@@ -52,7 +52,8 @@ export class MoradoresService {
         pontosTotal: true,
         nivelAtual: true,
         createdAt: true,
-        apartamento: { select: { numero: true, bloco: true } },
+        apartamentoId: true,
+        apartamento: { select: { id: true, numero: true, bloco: true } },
         nivel: { select: { nome: true, icone: true } },
       },
     });

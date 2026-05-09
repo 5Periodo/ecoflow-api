@@ -44,7 +44,7 @@ export class DescartesService {
           pesoKg: dto.pesoKg,
           pontosGerados,
           observacoes: dto.observacoes,
-          fotoUrl: dto.fotoUrl,
+          fotoUrls: dto.fotoUrls || [],
           status: 'PENDENTE',
         },
       });

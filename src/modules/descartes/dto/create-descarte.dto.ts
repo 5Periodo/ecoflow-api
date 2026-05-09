@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsNumber, IsOptional, IsString, Min } from 'class-validator';
+import { IsArray, IsNotEmpty, IsNumber, IsOptional, IsString, Min, ArrayMaxSize } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class CreateDescarteDto {
@@ -22,8 +22,10 @@ export class CreateDescarteDto {
   @IsOptional()
   observacoes?: string;
 
-  @ApiProperty({ required: false, description: 'URL da foto do descarte (opcional)' })
-  @IsString()
+  @ApiProperty({ required: false, description: 'URLs das fotos do descarte (máximo 3)', type: [String] })
+  @IsArray()
+  @IsString({ each: true })
+  @ArrayMaxSize(3)
   @IsOptional()
-  fotoUrl?: string;
+  fotoUrls?: string[];
 }

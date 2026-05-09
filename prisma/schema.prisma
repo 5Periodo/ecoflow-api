@@ -138,7 +138,7 @@ model RegistroDescarte {
   pontosGerados       Int             @map("pontos_gerados")
   pontosAtribuidos    Int?            @map("pontos_atribuidos")
   status              StatusDescarte  @default(PENDENTE)
-  fotoUrl             String?         @map("foto_url")
+  fotoUrls            String[]        @map("foto_urls")
   dataColeta          DateTime        @default(now()) @map("data_coleta")
   observacoes         String?
   createdAt           DateTime        @default(now()) @map("created_at")
