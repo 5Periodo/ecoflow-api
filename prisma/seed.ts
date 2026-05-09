@@ -188,6 +188,53 @@ async function main() {
          data: { realizadoKg: totalReciclado }
        });
     }
+    // --- Recompensas e Resgates ---
+    const recompensa1 = await prisma.recompensa.create({
+      data: {
+        condominioId: condominio.id,
+        titulo: 'Desconto de 5% na Taxa de Condomínio',
+        descricao: 'Abata 5% no valor da sua próxima cota condominial mensal.',
+        custoPontos: 500,
+        tipo: 'DESCONTO_CONDOMINIO',
+        valorDesconto: 5,
+        quantidadeDisponivel: -1,
+        status: 'ATIVA',
+      }
+    });
+
+    const recompensa2 = await prisma.recompensa.create({
+      data: {
+        condominioId: condominio.id,
+        titulo: 'Cupom R$20 no iFood',
+        descricao: 'Resgate um cupom exclusivo para pedir seu lanche favorito.',
+        custoPontos: 300,
+        tipo: 'CUPOM_PARCEIRO',
+        valorDesconto: 20,
+        quantidadeDisponivel: 10,
+        status: 'ATIVA',
+      }
+    });
+
+    await prisma.resgate.create({
+      data: {
+        moradorId: moradorJoao.id,
+        recompensaId: recompensa1.id,
+        codigoCupom: 'ECO-JOAO5DESC',
+        status: 'PENDENTE',
+      }
+    });
+
+    await prisma.resgate.create({
+      data: {
+        moradorId: moradorAna.id,
+        recompensaId: recompensa2.id,
+        codigoCupom: 'ECO-IFOOD20ANA',
+        status: 'UTILIZADO',
+        utilizadoEm: new Date(hoje.getTime() - 1000 * 60 * 60 * 48),
+      }
+    });
+    
+    console.log('✅ Recompensas simuladas criadas');
   }
 
   console.log('\n🎉 Seed concluído com sucesso!');

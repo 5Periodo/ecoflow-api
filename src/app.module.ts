@@ -8,6 +8,7 @@ import { EcopointsModule } from './modules/ecopoints/ecopoints.module';
 import { CategoriasMaterialModule } from './modules/categorias-material/categorias-material.module';
 import { DescartesModule } from './modules/descartes/descartes.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
+import { RecompensasModule } from './modules/recompensas/recompensas.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { DashboardModule } from './modules/dashboard/dashboard.module';
     CategoriasMaterialModule,
     DescartesModule,
     DashboardModule,
+    RecompensasModule,
   ],
 })
 export class AppModule {}
