@@ -1,13 +1,13 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateDescarteDto } from './dto/create-descarte.dto';
+import { AprovarDescarteDto } from './dto/aprovar-descarte.dto';
 
 @Injectable()
 export class DescartesService {
   constructor(private prisma: PrismaService) {}
 
   async registrarDescarte(moradorId: string, dto: CreateDescarteDto) {
-    // 1. Validar Morador
     const morador = await this.prisma.morador.findUnique({
       where: { id: moradorId },
       include: { apartamento: true },
@@ -16,7 +16,6 @@ export class DescartesService {
 
     const condominioId = morador.apartamento.condominioId;
 
-    // 2. Validar Ecopoint via QR Code hash
     const ecopoint = await this.prisma.ecopoint.findUnique({
       where: { qrCodeHash: dto.qrCodeHash },
     });
@@ -28,16 +27,13 @@ export class DescartesService {
       throw new BadRequestException(`Ecopoint indisponível (status: ${ecopoint.status})`);
     }
 
-    // 3. Validar Categoria Material
     const categoria = await this.prisma.categoriaMaterial.findUnique({
       where: { id: dto.categoriaMaterialId },
     });
     if (!categoria) throw new NotFoundException('Categoria de material não encontrada');
 
-    // 4. Calcular pontos: peso (kg) × pontos_por_kg da categoria
     const pontosGerados = Math.floor(Number(dto.pesoKg) * categoria.pontosPorKg);
 
-    // 5. Transação atômica: registra descarte + atualiza saldo + atualiza meta mensal
     const result = await this.prisma.$transaction(async (tx) => {
       const registro = await tx.registroDescarte.create({
         data: {
@@ -48,46 +44,15 @@ export class DescartesService {
           pesoKg: dto.pesoKg,
           pontosGerados,
           observacoes: dto.observacoes,
+          fotoUrl: dto.fotoUrl,
+          status: 'PENDENTE',
         },
       });
-
-      // Atualiza saldo de pontos do morador
-      const moradorAtualizado = await tx.morador.update({
-        where: { id: moradorId },
-        data: { pontosTotal: { increment: pontosGerados } },
-      });
-
-      // Atualiza nível do morador conforme pontos acumulados
-      const novoNivel = await tx.nivel.findFirst({
-        where: { pontosMinimos: { lte: moradorAtualizado.pontosTotal } },
-        orderBy: { pontosMinimos: 'desc' },
-      });
-      if (novoNivel && novoNivel.id !== moradorAtualizado.nivelAtual) {
-        await tx.morador.update({
-          where: { id: moradorId },
-          data: { nivelAtual: novoNivel.id },
-        });
-      }
-
-      // Atualiza realizado_kg da meta mensal (se existir)
-      const hoje = new Date();
-      const metaMensal = await tx.metaMensal.findFirst({
-        where: { condominioId, mes: hoje.getMonth() + 1, ano: hoje.getFullYear() },
-      });
-      if (metaMensal) {
-        const novoRealizado = Number(metaMensal.realizadoKg) + Number(dto.pesoKg);
-        const novoStatus = novoRealizado >= Number(metaMensal.metaKg) ? 'ATINGIDA' : 'EM_ANDAMENTO';
-        await tx.metaMensal.update({
-          where: { id: metaMensal.id },
-          data: { realizadoKg: { increment: dto.pesoKg }, status: novoStatus },
-        });
-      }
-
       return registro;
     });
 
     return {
-      message: 'Descarte registrado com sucesso!',
+      message: 'Descarte registrado! Aguardando aprovação do síndico.',
       pontosGerados,
       registroId: result.id,
     };
@@ -102,6 +67,101 @@ export class DescartesService {
       },
       orderBy: { dataColeta: 'desc' },
       take: 50,
+    });
+  }
+
+  // ─── Admin endpoints ─────────────────────────────────────────────────────────
+
+  async listarDescartesPendentes(condominioId: string) {
+    return this.prisma.registroDescarte.findMany({
+      where: {
+        status: 'PENDENTE',
+        apartamento: { condominioId },
+      },
+      include: {
+        morador: { select: { nome: true, email: true } },
+        apartamento: { select: { numero: true, bloco: true } },
+        categoriaMaterial: true,
+        ecopoint: { select: { descricao: true } },
+      },
+      orderBy: { dataColeta: 'desc' },
+    });
+  }
+
+  async listarTodosDescartes(condominioId: string) {
+    return this.prisma.registroDescarte.findMany({
+      where: { apartamento: { condominioId } },
+      include: {
+        morador: { select: { nome: true } },
+        apartamento: { select: { numero: true, bloco: true } },
+        categoriaMaterial: true,
+      },
+      orderBy: { dataColeta: 'desc' },
+      take: 100,
+    });
+  }
+
+  async aprovarDescarte(id: string, condominioId: string, dto: AprovarDescarteDto) {
+    const descarte = await this.prisma.registroDescarte.findUnique({
+      where: { id },
+      include: { apartamento: true },
+    });
+    if (!descarte) throw new NotFoundException('Descarte não encontrado');
+    if (descarte.apartamento.condominioId !== condominioId) {
+      throw new ForbiddenException('Descarte não pertence ao seu condomínio');
+    }
+    if (descarte.status !== 'PENDENTE') {
+      throw new BadRequestException(`Descarte já foi ${descarte.status.toLowerCase()}`);
+    }
+
+    const pontosFinais = dto.pontosAtribuidos ?? descarte.pontosGerados;
+
+    return this.prisma.$transaction(async (tx) => {
+      const updated = await tx.registroDescarte.update({
+        where: { id },
+        data: {
+          status: dto.status,
+          pontosAtribuidos: pontosFinais,
+        },
+      });
+
+      if (dto.status === 'APROVADO') {
+        // Credita os pontos finais ao morador
+        const moradorAtualizado = await tx.morador.update({
+          where: { id: descarte.moradorId },
+          data: { pontosTotal: { increment: pontosFinais } },
+        });
+
+        // Atualiza nível
+        const novoNivel = await tx.nivel.findFirst({
+          where: { pontosMinimos: { lte: moradorAtualizado.pontosTotal } },
+          orderBy: { pontosMinimos: 'desc' },
+        });
+        if (novoNivel && novoNivel.id !== moradorAtualizado.nivelAtual) {
+          await tx.morador.update({
+            where: { id: descarte.moradorId },
+            data: { nivelAtual: novoNivel.id },
+          });
+        }
+
+        // Atualiza meta mensal
+        const d = descarte.dataColeta;
+        const meta = await tx.metaMensal.findFirst({
+          where: { condominioId, mes: d.getMonth() + 1, ano: d.getFullYear() },
+        });
+        if (meta) {
+          const novoRealizado = Number(meta.realizadoKg) + Number(descarte.pesoKg);
+          await tx.metaMensal.update({
+            where: { id: meta.id },
+            data: {
+              realizadoKg: { increment: descarte.pesoKg },
+              status: novoRealizado >= Number(meta.metaKg) ? 'ATINGIDA' : 'EM_ANDAMENTO',
+            },
+          });
+        }
+      }
+
+      return { message: `Descarte ${dto.status.toLowerCase()} com sucesso!`, pontosAtribuidos: pontosFinais };
     });
   }
 }

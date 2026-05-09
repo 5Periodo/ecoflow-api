@@ -21,4 +21,9 @@ export class CreateDescarteDto {
   @IsString()
   @IsOptional()
   observacoes?: string;
+
+  @ApiProperty({ required: false, description: 'URL da foto do descarte (opcional)' })
+  @IsString()
+  @IsOptional()
+  fotoUrl?: string;
 }

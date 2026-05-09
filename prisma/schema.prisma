@@ -122,17 +122,26 @@ model CategoriaMaterial {
   @@map("categorias_material")
 }
 
+enum StatusDescarte {
+  PENDENTE
+  APROVADO
+  NEGADO
+}
+
 model RegistroDescarte {
-  id                  String   @id @default(uuid())
-  moradorId           String   @map("morador_id")
-  apartamentoId       String   @map("apartamento_id")
-  ecopointId          String   @map("ecopoint_id")
-  categoriaMaterialId Int      @map("categoria_material_id")
-  pesoKg              Decimal  @map("peso_kg")
-  pontosGerados       Int      @map("pontos_gerados")
-  dataColeta          DateTime @default(now()) @map("data_coleta")
+  id                  String          @id @default(uuid())
+  moradorId           String          @map("morador_id")
+  apartamentoId       String          @map("apartamento_id")
+  ecopointId          String          @map("ecopoint_id")
+  categoriaMaterialId Int             @map("categoria_material_id")
+  pesoKg              Decimal         @map("peso_kg")
+  pontosGerados       Int             @map("pontos_gerados")
+  pontosAtribuidos    Int?            @map("pontos_atribuidos")
+  status              StatusDescarte  @default(PENDENTE)
+  fotoUrl             String?         @map("foto_url")
+  dataColeta          DateTime        @default(now()) @map("data_coleta")
   observacoes         String?
-  createdAt           DateTime @default(now()) @map("created_at")
+  createdAt           DateTime        @default(now()) @map("created_at")
 
   morador             Morador           @relation(fields: [moradorId], references: [id])
   apartamento         Apartamento       @relation(fields: [apartamentoId], references: [id])

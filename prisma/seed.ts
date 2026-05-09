@@ -130,6 +130,66 @@ async function main() {
   });
   console.log('✅ Ecopoint criado (QR Code: ECOFLOW-DEMO-QR-HALL-A)');
 
+  // 9. Descartes de exemplo (Histórico e Ranking)
+  const moradorJoao = await prisma.morador.findUnique({ where: { email: 'joao@ecoflow.com' } });
+  const moradorAna = await prisma.morador.findUnique({ where: { email: 'ana@ecoflow.com' } });
+  const moradorCarlos = await prisma.morador.findUnique({ where: { email: 'carlos@ecoflow.com' } });
+  const ecoponto = await prisma.ecopoint.findUnique({ where: { qrCodeHash: 'ECOFLOW-DEMO-QR-HALL-A' } });
+
+  if (moradorJoao && moradorAna && moradorCarlos && ecoponto) {
+    // Limpa os descartes antigos para evitar duplicidade em múltiplos seeds
+    await prisma.registroDescarte.deleteMany({});
+
+    const descartesSeed = [
+      // Descartes Aprovados (Geram histórico, ranking e pontos)
+      { moradorId: moradorJoao.id, apartamentoId: moradorJoao.apartamentoId, ecopointId: ecoponto.id, categoriaMaterialId: 3, pesoKg: 2.5, pontosGerados: 75, pontosAtribuidos: 75, status: 'APROVADO' as any, fotoUrl: 'https://via.placeholder.com/300x200/2A4A4A/D4F4DD?text=Plastico', dataColeta: new Date(hoje.getFullYear(), hoje.getMonth(), 5) },
+      { moradorId: moradorAna.id, apartamentoId: moradorAna.apartamentoId, ecopointId: ecoponto.id, categoriaMaterialId: 4, pesoKg: 5.0, pontosGerados: 100, pontosAtribuidos: 100, status: 'APROVADO' as any, fotoUrl: 'https://via.placeholder.com/300x200/2A4A4A/D4F4DD?text=Papelao', dataColeta: new Date(hoje.getFullYear(), hoje.getMonth(), 8) },
+      { moradorId: moradorCarlos.id, apartamentoId: moradorCarlos.apartamentoId, ecopointId: ecoponto.id, categoriaMaterialId: 1, pesoKg: 1.2, pontosGerados: 60, pontosAtribuidos: 60, status: 'APROVADO' as any, fotoUrl: 'https://via.placeholder.com/300x200/2A4A4A/D4F4DD?text=Metal', dataColeta: new Date(hoje.getFullYear(), hoje.getMonth(), 10) },
+      { moradorId: moradorJoao.id, apartamentoId: moradorJoao.apartamentoId, ecopointId: ecoponto.id, categoriaMaterialId: 2, pesoKg: 3.0, pontosGerados: 120, pontosAtribuidos: 120, status: 'APROVADO' as any, fotoUrl: 'https://via.placeholder.com/300x200/2A4A4A/D4F4DD?text=Vidro', dataColeta: new Date(hoje.getFullYear(), hoje.getMonth(), 12) },
+      
+      // Descartes Pendentes (Para o síndico aprovar)
+      { moradorId: moradorAna.id, apartamentoId: moradorAna.apartamentoId, ecopointId: ecoponto.id, categoriaMaterialId: 3, pesoKg: 1.5, pontosGerados: 45, pontosAtribuidos: null, status: 'PENDENTE' as any, fotoUrl: 'https://via.placeholder.com/300x200/FF9500/FFFFFF?text=Plastico+Aguardando', dataColeta: new Date(hoje.getTime() - 1000 * 60 * 60 * 24) },
+      { moradorId: moradorCarlos.id, apartamentoId: moradorCarlos.apartamentoId, ecopointId: ecoponto.id, categoriaMaterialId: 5, pesoKg: 4.0, pontosGerados: 40, pontosAtribuidos: null, status: 'PENDENTE' as any, fotoUrl: 'https://via.placeholder.com/300x200/FF9500/FFFFFF?text=Organico+Aguardando', dataColeta: new Date() },
+      
+      // Descarte Negado
+      { moradorId: moradorJoao.id, apartamentoId: moradorJoao.apartamentoId, ecopointId: ecoponto.id, categoriaMaterialId: 3, pesoKg: 0.5, pontosGerados: 15, pontosAtribuidos: 0, status: 'NEGADO' as any, fotoUrl: 'https://via.placeholder.com/300x200/ef4444/FFFFFF?text=Recusado', dataColeta: new Date(hoje.getFullYear(), hoje.getMonth(), 2) }
+    ];
+
+    for (const d of descartesSeed) {
+      await prisma.registroDescarte.create({ data: d });
+    }
+    console.log('✅ Descartes simulados criados (Pendentes, Aprovados e Negados)');
+
+    // Atualizar os pontos e nível dos moradores baseado nos descartes aprovados
+    const moradoresArray = [moradorJoao, moradorAna, moradorCarlos];
+    for (const m of moradoresArray) {
+      const aprovados = descartesSeed.filter(d => d.moradorId === m.id && d.status === 'APROVADO');
+      const pontosTotal = aprovados.reduce((acc, curr) => acc + (curr.pontosAtribuidos || 0), 0);
+      if (pontosTotal > 0) {
+        const novoNivel = await prisma.nivel.findFirst({
+          where: { pontosMinimos: { lte: pontosTotal } },
+          orderBy: { pontosMinimos: 'desc' },
+        });
+        await prisma.morador.update({
+          where: { id: m.id },
+          data: { pontosTotal, nivelAtual: novoNivel?.id || 1 }
+        });
+      }
+    }
+    
+    // Atualizar meta do condomínio
+    const totalReciclado = descartesSeed.filter(d => d.status === 'APROVADO').reduce((acc, curr) => acc + curr.pesoKg, 0);
+    const meta = await prisma.metaMensal.findFirst({
+      where: { condominioId: condominio.id, mes: hoje.getMonth() + 1, ano: hoje.getFullYear() },
+    });
+    if (meta) {
+       await prisma.metaMensal.update({
+         where: { id: meta.id },
+         data: { realizadoKg: totalReciclado }
+       });
+    }
+  }
+
   console.log('\n🎉 Seed concluído com sucesso!');
   console.log('📌 Credenciais de acesso:');
   console.log('   Síndico: sindico@ecoflow.com / ecoflow123');
