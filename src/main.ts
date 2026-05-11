@@ -13,12 +13,26 @@ async function bootstrap() {
 
   const config = new DocumentBuilder()
     .setTitle('EcoFlow API')
-    .setDescription('API MVP para o EcoFlow - Gestão Inteligente de Resíduos')
+    .setDescription('API MVP para o EcoFlow - Gestão Inteligente de Resíduos. Esta API gerencia condomínios, moradores, descartes e recompensas.')
     .setVersion('1.0')
-    .addBearerAuth()
+    .setContact('EcoFlow Team', 'https://ecoflow.com', 'contato@ecoflow.com')
+    .setLicense('MIT', 'https://opensource.org/licenses/MIT')
+    .addBearerAuth({
+      type: 'http',
+      scheme: 'bearer',
+      bearerFormat: 'JWT',
+      name: 'JWT',
+      description: 'Insira o token JWT',
+      in: 'header',
+    })
     .build();
   const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api/docs', app, document);
+  SwaggerModule.setup('api/docs', app, document, {
+    swaggerOptions: {
+      persistAuthorization: true,
+    },
+    customSiteTitle: 'EcoFlow API Documentation',
+  });
 
   await app.listen(process.env.PORT ?? 3000);
 }
