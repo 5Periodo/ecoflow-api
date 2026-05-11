@@ -1,8 +1,21 @@
 node_modules
 # Keep environment variables out of version control
 .env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
 
+# Build outputs
+dist
+dist-ssr
 /generated/prisma
 
+# Docs and temporary files
 _docs
-dist
+*.log
+npm-debug.log*
+.DS_Store
+.vscode/*
+!.vscode/extensions.json
+.idea/
