@@ -11,6 +11,9 @@ export class RankingItemResponseDto {
   moradorNome!: string;
 
   @ApiProperty()
+  pontosTotal!: number;
+
+  @ApiProperty()
   totalKg!: number;
 
   @ApiProperty()
