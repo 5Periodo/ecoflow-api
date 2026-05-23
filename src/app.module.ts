@@ -8,6 +8,7 @@ import { EcopointsModule } from './modules/ecopoints/ecopoints.module';
 import { CategoriasMaterialModule } from './modules/categorias-material/categorias-material.module';
 import { DescartesModule } from './modules/descartes/descartes.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
+import { RankingModule } from './modules/ranking/ranking.module';
 import { RecompensasModule } from './modules/recompensas/recompensas.module';
 
 @Module({
@@ -21,6 +22,7 @@ import { RecompensasModule } from './modules/recompensas/recompensas.module';
     CategoriasMaterialModule,
     DescartesModule,
     DashboardModule,
+    RankingModule,
     RecompensasModule,
   ],
 })
