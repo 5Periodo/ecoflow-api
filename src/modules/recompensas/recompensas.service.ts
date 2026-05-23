@@ -1,4 +1,9 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateRecompensaDto, UpdateRecompensaDto } from './dto/recompensa.dto';
 import { v4 as uuidv4 } from 'uuid';
@@ -30,7 +35,9 @@ export class RecompensasService {
   }
 
   async findOne(id: string, condominioId: string) {
-    const recompensa = await this.prisma.recompensa.findUnique({ where: { id } });
+    const recompensa = await this.prisma.recompensa.findUnique({
+      where: { id },
+    });
     if (!recompensa || recompensa.condominioId !== condominioId) {
       throw new NotFoundException('Recompensa não encontrada neste condomínio');
     }
@@ -56,8 +63,10 @@ export class RecompensasService {
 
   async remove(id: string, condominioId: string) {
     await this.findOne(id, condominioId);
-    
-    const resgatesCount = await this.prisma.resgate.count({ where: { recompensaId: id } });
+
+    const resgatesCount = await this.prisma.resgate.count({
+      where: { recompensaId: id },
+    });
     if (resgatesCount > 0) {
       // Hard delete not allowed if there are redemptions. Mark as ENCERRADA instead.
       return this.prisma.recompensa.update({
@@ -75,7 +84,12 @@ export class RecompensasService {
     return this.prisma.resgate.findMany({
       where: { recompensa: { condominioId } },
       include: {
-        morador: { select: { nome: true, apartamento: { select: { numero: true, bloco: true } } } },
+        morador: {
+          select: {
+            nome: true,
+            apartamento: { select: { numero: true, bloco: true } },
+          },
+        },
         recompensa: { select: { titulo: true, tipo: true } },
       },
       orderBy: { resgatadoEm: 'desc' },
@@ -106,10 +120,14 @@ export class RecompensasService {
 
   // Future morador feature, but let's implement the service logic now:
   async resgatar(moradorId: string, recompensaId: string) {
-    const morador = await this.prisma.morador.findUnique({ where: { id: moradorId } });
+    const morador = await this.prisma.morador.findUnique({
+      where: { id: moradorId },
+    });
     if (!morador) throw new NotFoundException('Morador não encontrado');
 
-    const recompensa = await this.prisma.recompensa.findUnique({ where: { id: recompensaId } });
+    const recompensa = await this.prisma.recompensa.findUnique({
+      where: { id: recompensaId },
+    });
     if (!recompensa) throw new NotFoundException('Recompensa não encontrada');
 
     if (recompensa.status !== 'ATIVA') {
@@ -120,7 +138,10 @@ export class RecompensasService {
       throw new BadRequestException('Recompensa expirada');
     }
 
-    if (recompensa.quantidadeDisponivel !== -1 && recompensa.quantidadeDisponivel <= 0) {
+    if (
+      recompensa.quantidadeDisponivel !== -1 &&
+      recompensa.quantidadeDisponivel <= 0
+    ) {
       throw new BadRequestException('Recompensa esgotada');
     }
 

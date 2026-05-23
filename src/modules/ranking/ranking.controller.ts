@@ -11,6 +11,8 @@ import { RankingService } from './ranking.service';
 import { RankingItemResponseDto } from './dto/ranking-response.dto';
 
 type RankingUser = {
+  id?: string;
+  apartamentoId?: string;
   condominioId: string;
 };
 
@@ -34,5 +36,19 @@ export class RankingController {
   })
   getRankingMensal(@CurrentUser() user: RankingUser) {
     return this.rankingService.getRankingMensal(user.condominioId);
+  }
+
+  @Get('me')
+  @ApiOperation({
+    summary: 'Meu ranking mensal',
+    description: 'Retorna a posição e estatísticas do morador logado no ranking mensal do seu condomínio.',
+  })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Informações do usuário no ranking retornadas com sucesso',
+    type: RankingItemResponseDto,
+  })
+  getMeuRankingMensal(@CurrentUser() user: RankingUser) {
+    return this.rankingService.getMeuRankingMensal(user.apartamentoId as string, user.condominioId);
   }
 }

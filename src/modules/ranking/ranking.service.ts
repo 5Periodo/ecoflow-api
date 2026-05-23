@@ -48,4 +48,54 @@ export class RankingService {
 
     return rankingDetalhado;
   }
+
+  async getMeuRankingMensal(apartamentoId: string, condominioId: string) {
+    const hoje = new Date();
+    const inicioMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+
+    const rankingMensal = await this.prisma.registroDescarte.groupBy({
+      by: ['apartamentoId'],
+      _sum: { pesoKg: true },
+      _count: { id: true },
+      where: {
+        apartamento: { condominioId },
+        dataColeta: { gte: inicioMes },
+      },
+      orderBy: { _sum: { pesoKg: 'desc' } },
+    });
+
+    // find the position for the given apartment
+    let position = null as number | null;
+    let foundRank: any = null;
+
+    for (const [index, rank] of rankingMensal.entries()) {
+      if (rank.apartamentoId === apartamentoId) {
+        position = index + 1;
+        foundRank = rank;
+        break;
+      }
+    }
+
+    const apartamento = await this.prisma.apartamento.findUnique({
+      where: { id: apartamentoId },
+      include: {
+        moradores: {
+          take: 1,
+          select: { nome: true, pontosTotal: true },
+        },
+      },
+    });
+
+    const totalKg = foundRank?._sum?.pesoKg ? Number(foundRank._sum.pesoKg) : 0;
+    const coletas = foundRank?._count?.id ?? 0;
+
+    return {
+      posicao: position,
+      apartamentoNumero: apartamento?.numero,
+      moradorNome: apartamento?.moradores[0]?.nome || 'Não identificado',
+      pontosTotal: apartamento?.moradores[0]?.pontosTotal || 0,
+      totalKg,
+      coletas,
+    };
+  }
 }
