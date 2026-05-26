@@ -1,7 +1,12 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateMoradorDto } from './dto/morador.dto';
 import * as bcrypt from 'bcrypt';
+import { UpdateMoradorDto } from './dto/update-morador.dto';
 
 @Injectable()
 export class MoradoresService {
@@ -9,20 +14,31 @@ export class MoradoresService {
 
   async create(condominioId: string, dto: CreateMoradorDto) {
     // Valida se o apartamento pertence ao condomínio do síndico
-    const apartamento = await this.prisma.apartamento.findUnique({ where: { id: dto.apartamentoId } });
+    const apartamento = await this.prisma.apartamento.findUnique({
+      where: { id: dto.apartamentoId },
+    });
     if (!apartamento || apartamento.condominioId !== condominioId) {
-      throw new BadRequestException('Apartamento inválido para este condomínio');
+      throw new BadRequestException(
+        'Apartamento inválido para este condomínio',
+      );
     }
 
     // Verifica e-mail único
-    const emailExist = await this.prisma.morador.findUnique({ where: { email: dto.email } });
+    const emailExist = await this.prisma.morador.findUnique({
+      where: { email: dto.email },
+    });
     if (emailExist) throw new BadRequestException('E-mail já está em uso');
 
     // Garante que o nível 1 existe antes de criar o morador
     await this.prisma.nivel.upsert({
       where: { id: 1 },
       update: {},
-      create: { id: 1, nome: 'Iniciante', pontosMinimos: 0, icone: 'iniciante' },
+      create: {
+        id: 1,
+        nome: 'Iniciante',
+        pontosMinimos: 0,
+        icone: 'iniciante',
+      },
     });
 
     const senha = dto.senha || 'ecoflow123';
@@ -69,7 +85,9 @@ export class MoradoresService {
         pontosTotal: true,
         nivelAtual: true,
         createdAt: true,
-        apartamento: { select: { id: true, numero: true, bloco: true, condominioId: true } },
+        apartamento: {
+          select: { id: true, numero: true, bloco: true, condominioId: true },
+        },
         nivel: { select: { nome: true, icone: true, pontosMinimos: true } },
       },
     });
@@ -106,5 +124,41 @@ export class MoradoresService {
     });
 
     return { ...morador, proximoNivel };
+  }
+
+  async updateMeuPerfil(moradorId: string, dto: UpdateMoradorDto) {
+    const morador = await this.prisma.morador.findUnique({
+      where: { id: moradorId },
+    });
+    if (!morador) throw new NotFoundException('Morador não encontrado');
+
+    const updateData: {
+      nome?: string;
+      senhaHash?: string;
+    } = {};
+
+    if (dto.nome) {
+      updateData.nome = dto.nome;
+    }
+
+    if (dto.novaSenha) {
+      const senhaHash = await bcrypt.hash(dto.novaSenha, 10);
+      updateData.senhaHash = senhaHash;
+    }
+
+    return this.prisma.morador.update({
+      where: { id: moradorId },
+      data: updateData,
+      select: {
+        id: true,
+        nome: true,
+        email: true,
+        pontosTotal: true,
+        nivelAtual: true,
+        createdAt: true,
+        apartamento: { select: { numero: true, bloco: true } },
+        nivel: { select: { nome: true, icone: true } },
+      },
+    });
   }
 }
