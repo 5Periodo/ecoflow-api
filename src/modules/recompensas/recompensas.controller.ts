@@ -24,6 +24,8 @@ import {
   ResgateResponseDto,
 } from './dto/recompensa-response.dto';
 
+type RequestWithUser = Request & { user: { id: string; condominioId: string } };
+
 @ApiTags('Recompensas')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
@@ -44,7 +46,7 @@ export class RecompensasController {
   })
   @ApiResponse({ status: HttpStatus.FORBIDDEN, description: 'Acesso restrito' })
   create(
-    @Request() req: any,
+    @Request() req: RequestWithUser,
     @Body() createRecompensaDto: CreateRecompensaDto,
   ) {
     return this.recompensasService.create(
@@ -64,7 +66,7 @@ export class RecompensasController {
     description: 'Lista de recompensas retornada com sucesso',
     type: [RecompensaResponseDto],
   })
-  findAll(@Request() req: any) {
+  findAll(@Request() req: RequestWithUser) {
     return this.recompensasService.findAll(req.user.condominioId);
   }
 
@@ -83,7 +85,7 @@ export class RecompensasController {
     description: 'Recompensa não encontrada',
   })
   update(
-    @Request() req: any,
+    @Request() req: RequestWithUser,
     @Param('id') id: string,
     @Body() updateRecompensaDto: UpdateRecompensaDto,
   ) {
@@ -108,7 +110,7 @@ export class RecompensasController {
     status: HttpStatus.NOT_FOUND,
     description: 'Recompensa não encontrada',
   })
-  remove(@Request() req: any, @Param('id') id: string) {
+  remove(@Request() req: RequestWithUser, @Param('id') id: string) {
     return this.recompensasService.remove(id, req.user.condominioId);
   }
 
@@ -132,7 +134,7 @@ export class RecompensasController {
     description:
       'Pontos insuficientes, recompensa esgotada, inativa ou expirada',
   })
-  resgatar(@Request() req: any, @Param('id') id: string) {
+  resgatar(@Request() req: RequestWithUser, @Param('id') id: string) {
     // req.user.id can be admin ID if logged in as admin, but usually this is used by morador
     return this.recompensasService.resgatar(req.user.id, id);
   }
@@ -150,7 +152,7 @@ export class RecompensasController {
     description: 'Lista de resgates retornada com sucesso',
     type: [ResgateResponseDto],
   })
-  listarResgates(@Request() req: any) {
+  listarResgates(@Request() req: RequestWithUser) {
     return this.recompensasService.listarResgates(req.user.condominioId);
   }
 
@@ -169,7 +171,7 @@ export class RecompensasController {
     status: HttpStatus.NOT_FOUND,
     description: 'Morador não encontrado',
   })
-  meuHistoricoResgates(@Request() req: any) {
+  meuHistoricoResgates(@Request() req: RequestWithUser) {
     return this.recompensasService.meuHistoricoResgates(req.user.id);
   }
 
@@ -191,7 +193,7 @@ export class RecompensasController {
     status: HttpStatus.NOT_FOUND,
     description: 'Resgate não encontrado',
   })
-  utilizarResgate(@Request() req: any, @Param('id') id: string) {
+  utilizarResgate(@Request() req: RequestWithUser, @Param('id') id: string) {
     return this.recompensasService.utilizarResgate(id, req.user.condominioId);
   }
 }
