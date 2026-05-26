@@ -154,6 +154,25 @@ export class RecompensasController {
     return this.recompensasService.listarResgates(req.user.condominioId);
   }
 
+  @Get('meu-historico-resgates')
+  @ApiOperation({
+    summary: 'Obter histórico de resgates do morador (Morador)',
+    description:
+      'Retorna todos os resgates realizados pelo morador logado, com detalhes das recompensas.',
+  })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Histórico de resgates retornado com sucesso',
+    type: [ResgateResponseDto],
+  })
+  @ApiResponse({
+    status: HttpStatus.NOT_FOUND,
+    description: 'Morador não encontrado',
+  })
+  meuHistoricoResgates(@Request() req: any) {
+    return this.recompensasService.meuHistoricoResgates(req.user.id);
+  }
+
   @Patch('admin/resgates/:id/utilizar')
   @ApiOperation({
     summary: 'Marcar resgate como utilizado (Síndico)',

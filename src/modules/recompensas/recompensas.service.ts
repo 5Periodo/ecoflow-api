@@ -1,6 +1,5 @@
 import {
   BadRequestException,
-  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -174,6 +173,21 @@ export class RecompensasService {
           codigoCupom,
         },
       });
+    });
+  }
+
+  async meuHistoricoResgates(moradorId: string) {
+    const morador = await this.prisma.morador.findUnique({
+      where: { id: moradorId },
+    });
+    if (!morador) throw new NotFoundException('Morador não encontrado');
+
+    return this.prisma.resgate.findMany({
+      where: { moradorId },
+      include: {
+        recompensa: { select: { titulo: true, tipo: true, custoPontos: true } },
+      },
+      orderBy: { resgatadoEm: 'desc' },
     });
   }
 }
