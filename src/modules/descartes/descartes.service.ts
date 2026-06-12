@@ -82,7 +82,7 @@ export class DescartesService {
         morador: { select: { nome: true, email: true } },
         apartamento: { select: { numero: true, bloco: true } },
         categoriaMaterial: true,
-        ecopoint: { select: { descricao: true } },
+        ecopoint: { select: { descricao: true, localizacao: true } },
       },
       orderBy: { dataColeta: 'desc' },
     });
@@ -95,6 +95,7 @@ export class DescartesService {
         morador: { select: { nome: true } },
         apartamento: { select: { numero: true, bloco: true } },
         categoriaMaterial: true,
+        ecopoint: { select: { descricao: true, localizacao: true } },
       },
       orderBy: { dataColeta: 'desc' },
       take: 100,

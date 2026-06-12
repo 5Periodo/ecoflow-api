@@ -49,4 +49,14 @@ export class DescarteResponseDto {
 
   @ApiProperty({ type: MoradorMinimalResponse, required: false })
   morador?: MoradorMinimalResponse;
+
+  @ApiProperty({
+    type: 'object',
+    properties: {
+      descricao: { type: 'string' },
+      localizacao: { type: 'string' },
+    },
+    required: false,
+  })
+  ecopoint?: { descricao: string; localizacao: string };
 }
