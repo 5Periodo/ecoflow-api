@@ -16,6 +16,14 @@ class MoradorMinimalResponse {
   apartamento: { numero: string; bloco: string };
 }
 
+class EcopointMinimalResponse {
+  @ApiProperty()
+  descricao: string;
+
+  @ApiProperty()
+  localizacao: string;
+}
+
 export class DescarteResponseDto {
   @ApiProperty()
   id: string;
@@ -50,13 +58,6 @@ export class DescarteResponseDto {
   @ApiProperty({ type: MoradorMinimalResponse, required: false })
   morador?: MoradorMinimalResponse;
 
-  @ApiProperty({
-    type: 'object',
-    properties: {
-      descricao: { type: 'string' },
-      localizacao: { type: 'string' },
-    },
-    required: false,
-  })
-  ecopoint?: { descricao: string; localizacao: string };
+  @ApiProperty({ type: EcopointMinimalResponse, required: false })
+  ecopoint?: EcopointMinimalResponse;
 }
